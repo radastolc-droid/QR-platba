@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QR Platba – Generátor</title>
+
+  <!-- TAILWIND (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- QR LIBRARY -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    body { font-family: sans-serif; }
+  </style>
+</head>
+
+<body class="min-h-screen bg-slate-100 py-8 px-4">
+
+  <div class="max-w-5xl mx-auto">
+
+    <!-- Header -->
+    <header class="mb-10 text-center sm:text-left sm:flex sm:items-end sm:justify-between">
+      <div>
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+          Generátor <span class="text-indigo-600">QR Platby</span>
+        </h1>
+        <p class="mt-2 text-slate-500 text-lg">Snadné vytvoření kódu pro váš fixní účet.</p>
+      </div>
+      <div class="hidden sm:block text-right">
+        <div class="text-xs font-semibold text-indigo-600 uppercase tracking-widest bg-indigo-50 px-3 py-1 rounded-full inline-block">
+          CZ Standard (SPAY)
+        </div>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+      <!-- Left -->
+      <div class="lg:col-span-7 space-y-6">
+
+        <!-- Smart Input (nahrazeno – čistý JS) -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+          <h3 class="text-lg font-semibold text-slate-800 mb-4">Chytré zadání (veta)</h3>
+          <input
+            id="smartInput"
+            type="text"
+            class="w-full p-3 border border-slate-300 rounded-xl"
+            placeholder="Např.: Pošli 1500 Kč VS 202401 zpráva Faktura"
+          />
+          <button id="parseBtn"
+            class="mt-3 w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold">
+            Rozpoznat a vyplnit
+          </button>
+        </div>
+
+        <!-- Manual Input -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+          <div class="p-6 sm:p-8 space-y-6">
+
+            <h3 class="text-lg font-semibold text-slate-800 border-b border-slate-100 pb-4">Manuální zadání</h3>
+
+            <div class="space-y-5">
+
+              <!-- Amount -->
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Částka (CZK)</label>
+                <input
+                  id="amount"
+                  type="number"
+                  min="0"
+                  class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl"
+                  placeholder="0.00"
+                />
+              </div>
+
+              <!-- VS -->
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Variabilní symbol</label>
+                <input
+                  id="vs"
+                  maxlength="10"
+                  class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl"
+                  placeholder="Např. 2024001"
+                />
+              </div>
+
+              <!-- Message -->
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1.5">Zpráva pro příjemce</label>
+                <input
+                  id="msg"
+                  maxlength="60"
+                  class="w-full p-3 bg-slate-50 border border-slate-300 rounded-xl"
+                  placeholder="Např. Faktura za služby"
+                />
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right preview -->
+      <div class="lg:col-span-5">
+        <div class="sticky top-8 flex flex-col gap-4">
+
+          <div class="bg-indigo-600 text-white p-4 rounded-2xl shadow-lg">
+            <p class="text-xs text-indigo-200 uppercase">Celkem k úhradě</p>
+            <p id="amountPreview" class="text-2xl font-bold">0 Kč</p>
+          </div>
+
+          <div class="bg-white border border-slate-200 shadow p-6 rounded-2xl flex justify-center">
+            <div id="qrcode"></div>
+          </div>
+
+          <p class="text-center text-sm text-gray-400 mt-2">
+            Naskenujte kód ve vaší mobilní bankovní aplikaci.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SCRIPT -->
+  <script>
+    const amountEl = document.getElementById("amount");
+    const vsEl = document.getElementById("vs");
+    const msgEl = document.getElementById("msg");
+    const amountPreview = document.getElementById("amountPreview");
+    const smartInput = document.getElementById("smartInput");
+    const parseBtn = document.getElementById("parseBtn");
+
+    let qr;
+
+    function updatePreview() {
+      const a = Number(amountEl.value || 0);
+      amountPreview.textContent = a.toLocaleString("cs-CZ") + " Kč";
+      generateQR();
+    }
+
+    function generateQR() {
+      const amount = Number(amountEl.value || 0);
+      const vs = vsEl.value || "";
+      const msg = msgEl.value || "";
+
+      const ACCOUNT = "35-9706800297/0100";  // úprava podle potřeby
+
+      let text = `SPD*1.0*ACC:${ACCOUNT}*AM:${amount}`;
+      if (vs) text += `*X-VS:${vs}`;
+      if (msg) text += `*MSG:${msg}`;
+
+      if (qr) qr.clear();
+      qr = new QRCode(document.getElementById("qrcode"), {
+        text,
+        width: 220,
+        height: 220,
+      });
+    }
+
+    amountEl.addEventListener("input", updatePreview);
+    vsEl.addEventListener("input", generateQR);
+    msgEl.addEventListener("input", generateQR);
+
+    // Parse sentence input
+    parseBtn.onclick = () => {
+      const t = smartInput.value;
+
+      const amount = t.match(/(\d+)\s*(kč|kc)/i);
+      const vs = t.match(/vs\s*(\d+)/i);
+      const msg = t.match(/zpráva\s*(.+)$/i);
+
+      if (amount) amountEl.value = amount[1];
+      if (vs) vsEl.value = vs[1];
+      if (msg) msgEl.value = msg[1];
+
+      updatePreview();
+    };
+
+    generateQR();
+  </script>
+</body>
+</html>
