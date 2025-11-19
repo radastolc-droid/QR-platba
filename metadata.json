@@ -1,0 +1,5 @@
+{
+  "name": "Copy of QR Platba - AI Generator",
+  "description": "Rychlý generátor českých QR kódů pro platby s fixním číslem účtu a AI asistentem pro parsování textu.",
+  "requestFramePermissions": []
+}
